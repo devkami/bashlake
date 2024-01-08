@@ -3,9 +3,8 @@
 # Import test_lib and the script to be tested
 source ../security/security.sh
 
-function preTest(){    
-    # Save the original value of KDLSEC_MASTER_KEY, if it exists, or set to null
-    original_kdlsec_master_key=${KDLSEC_MASTER_KEY:-}
+function preTest(){        
+    original_kdlsec_public_key=${KDLSEC_MASTER_KEY:-}
     test_keychain_file="test_keychain.kc"
     test_password="TestPassword123"
 }
@@ -86,14 +85,20 @@ function testDecryptPassword(){
 
 function testRetrievePasswordFromKeychain(){    
     local encryption_key
-    encryption_key=$(storePasswordInKeychain "$test_password" "$test_keychain_file" "$KDLSEC_MASTER_KEY")
-    echo "$encryption_key"
+    encryption_key=$(storePasswordInKeychain "$test_password" "$test_keychain_file" "$KDLSEC_MASTER_KEY")    
     local retrieved_password
-    retrieved_password=$(retrievePasswordFromKeychain "$encryption_key" "$test_keychain_file" "$KDLSEC_MASTER_KEY")
-    echo "retrivied $retrieved_password"
+    retrieved_password=$(retrievePasswordFromKeychain "$encryption_key" "$test_keychain_file" "$KDLSEC_MASTER_KEY")    
     
     # Check if the retrieved password matches the original
     if [ "$retrieved_password" == "$test_password" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function testVerifyKeychainEncryption(){    
+    if verifyKeychainEncryption "$test_keychain_file" "$KDLSEC_MASTER_KEY"; then
         return 0
     else
         return 1
@@ -106,7 +111,7 @@ function postTest(){
     # Cleanup: Removing test keychain file
     rm "$test_keychain_file"    
     # Restore KDLSEC_MASTER_KEY to its original value or unset if it was not set before
-    ([ -n "$original_kdlsec_master_key" ] && export KDLSEC_MASTER_KEY="$original_kdlsec_master_key") || unset KDLSEC_MASTER_KEY
+    ([ -n "$original_kdlsec_public_key" ] && export KDLSEC_MASTER_KEY="$original_kdlsec_public_key") || unset KDLSEC_MASTER_KEY
     
     unset test_keychain_file test_password    
     
@@ -114,7 +119,7 @@ function postTest(){
 }
 
 function run(){
-    source ./test_lib.sh
+    source test_lib.sh
     preTest
     runAllTests
     postTest
