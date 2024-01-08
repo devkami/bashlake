@@ -2,7 +2,18 @@
 
 # Description:
 # This script offers a suite of validation functions for various types of inputs related to network addresses, domain names, and general input formats. It's designed to ensure the integrity and correctness of data inputs, particularly in configurations related to data sources and network settings. The script is essential for enforcing validation rules on user inputs or configurations before processing or storing them.
-
+#
+# The script includes functionalities to:
+# - Validate IPv4 addresses.
+# - Validate IPv6 addresses.
+# - Validate domain names.
+# - Validate host addresses.
+# - Validate inputs containing only digits.
+# - Validate inputs containing only alphanumeric characters and underscores.
+# - Validate inputs containing only single words, alphanumeric, and beginning with a letter.
+# - Validate inputs against a list of items.
+# - Validate inputs based on a field criteria using a JSON input format.
+#
 # Functions:
 # - validateIPv4Address: Checks if a given string is a valid IPv4 address.
 # - validateIPv6Address: Verifies if an input string conforms to the IPv6 address format.
@@ -13,14 +24,14 @@
 # - validateSingleWord: Confirms that an input is a single word, alphanumeric, and begins with a letter.
 # - validateInputInList: Validates whether a given input is present in a provided list of items.
 # - validateField: Validates a user input based on the specified field criteria using a JSON input format.
-
+#
 # Usage:
 # The script can be sourced in any Bash environment where input validation is required. It's especially useful in scenarios involving network configurations, user input validation, or data source management. Each function is designed to be independently called with specific arguments, returning a success or failure status.
-
+#
 # Prerequisites:
 # - jq must be installed on the system for parsing and handling JSON formatted data.
 # - Familiarity with regular expressions and Bash scripting is recommended for effective use of the script.
-
+#
 # Author: Maicon de Menezes
 # Creation Date: 06/01/2024
 # Version: 0.1.0
@@ -131,7 +142,7 @@ function validateInputInList() {
 
 # validateField: Validates user input based on the specified field.
 # Arguments: field_json: A JSON string {"field_name": "name of the field", "field_value": "value"}.
-# Returns: Field Value if successful, or returns 1 on failure.
+# Returns: Success (0) or failure (1).
 function validateField() {
   local field_json=$1
   local field_name=$(echo "$field_json" | jq -r '.field_name')
