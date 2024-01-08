@@ -36,8 +36,7 @@ source ../security/security.sh
 # Arguments:
 #   source_json: A JSON string representing the current state of the data source.
 # Returns:
-#   0 and The name/path of the keychain file on success.
-#   1 on failure.
+#   Success (0) and The name/path of the keychain file on success or failure (1).
 function getDatasourceKeychainFilepath(){
   local source_json=$1
   local origin=$(echo "$source_json" | jq -r '.source.origin')
@@ -87,34 +86,70 @@ function setDatasourceKeychain(){
   fi
 }
 
-# getDatasourcePrivateKey: Gets the encryption key for a password in a specific data source.
-# Arguments: source_json: A JSON string representing the data source.
-# Returns: The encryption key for the password.
-function getDatasourcePrivateKey() {
-  local source_json=$1  
+# encryptDatasourcePassword: Updates the source JSON with the encrypted password.
+# Arguments:
+#   source_json: A JSON string representing the data source with 'password' field.
+#   public_key: The master key used to encrypt the keychain file.
+# Returns: The source JSON with the encrypted password.
+function encryptDatasourcePassword() {
+  local source_json=$1
   local public_key=$2
-  
-  keychain_file=$(setDatasourceKeychain "$source_json" "$public_key")
+  local plain_password=$(echo "$source_json" | jq -r '.source.auth.password')
 
-  local private_key="$(storePasswordInKeychain "$password" "$keychain_file" "$public_key")"
-  if [ -n "$private_key" ]; then
-    echo "$private_key"
-    return 0
-  else
-    echo "Failed to store the password in the keychain file." >&2
+  if [ -z "$plain_password" ]; then
+    echo "Failure: Unable to extract plain password."
+    return 1
+  fi
+
+  local keychain_file=$(getDatasourceKeychainFilepath "$source_json")
+  local encrypted_password="$(storePasswordInKeychain "$password" "$keychain_file" "$public_key")"
+
+  if [ -z "$encrypted_password" ]; then
+    echo "Failure: Unable to generate encrypted password."
     return 1
   fi  
+
+  updated_source_json=$(echo "$source_json" | jq --arg encrypted_password "$encrypted_password" '.source.auth.password = $encrypted_password')
+
+  if [ -z "$updated_source_json" ]; then
+    echo "Failure: Unable to update the source JSON."
+    return 1
+  fi
+
+  echo "$updated_source_json"
+  return 0
 }
 
 # decryptDatasourcePassword: Updates the source JSON with the decrypted password.
-# Arguments: source_json: A JSON string representing the data source with 'password' field.
-# Returns: The source JSON with the decrypted password.
+# Arguments:
+#   source_json: A JSON string representing the data source with 'password' field.
+#   public_key: The master key used to encrypt the keychain file.
+# Returns: Success (0) and datasource JSON with the encrypted password or Failure (1) and error message.
 function decryptDatasourcePassword() {
   local source_json=$1
   local public_key=$2
   local encryption_key=$(echo "$source_json" | jq -r '.source.auth.password')
-  local keychain_file=$(getDatasourceKeychainFilepath "$source_json")  
+
+  if [ -z "$encryption_key" ]; then
+    echo "Failure: Unable to extract encryption key."
+    return 1
+  fi
+
+  local keychain_file=$(getDatasourceKeychainFilepath "$source_json")
   local db_password=$(retrievePasswordFromKeychain "$encryption_key" "$keychain_file" "$public_key")
+
+  if [ -z "$db_password" ]; then
+    echo "Failure: Unable to retrieve or decrypt the database password."
+    return 1
+  fi
+
   updated_source_json=$(echo "$source_json" | jq --arg decrypted_password "$db_password" '.source.auth.password = $decrypted_password')
+
+  if [ -z "$updated_source_json" ]; then
+    echo "Failure: Unable to update the source JSON."
+    return 1
+  fi
   echo "$updated_source_json"
+  return 0  
 }
+
