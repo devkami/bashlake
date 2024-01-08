@@ -1,17 +1,29 @@
 #!/bin/bash
-#
+
 # Description:
-#
+# This script offers a suite of validation functions for various types of inputs related to network addresses, domain names, and general input formats. It's designed to ensure the integrity and correctness of data inputs, particularly in configurations related to data sources and network settings. The script is essential for enforcing validation rules on user inputs or configurations before processing or storing them.
+
 # Functions:
-#  validateIPv4Address: Validates if the input is a valid IPv4 address.
-#  validateIPv6Address: Validates if the input is a valid IPv6 address.
-#  validateDomainName: Validates if the input is a valid domain name as url.
-#  validateHostAddress: Validates if the input is a valid host address.
-#  validateOnlyDigits: Validates if input contains only digits.
-#  validateOnlyText: Validates if input contains only letters, numbers, and '_'.
-#  validateSingleWord: Validates if input is a single word, alphanumeric, and starts with a letter.
-#  validateInputInList: Validates if the provided input is in the specified list.
-#  validateField: Validates user input based on the specified field.
+# - validateIPv4Address: Checks if a given string is a valid IPv4 address.
+# - validateIPv6Address: Verifies if an input string conforms to the IPv6 address format.
+# - validateDomainName: Determines if a string is a valid domain name.
+# - validateHostAddress: Validates whether a string is a valid host address, including IPv4, IPv6, domain names, or localhost.
+# - validateOnlyDigits: Ensures an input string contains only numerical digits.
+# - validateOnlyText: Checks if an input contains only alphanumeric characters and underscores.
+# - validateSingleWord: Confirms that an input is a single word, alphanumeric, and begins with a letter.
+# - validateInputInList: Validates whether a given input is present in a provided list of items.
+# - validateField: Validates a user input based on the specified field criteria using a JSON input format.
+
+# Usage:
+# The script can be sourced in any Bash environment where input validation is required. It's especially useful in scenarios involving network configurations, user input validation, or data source management. Each function is designed to be independently called with specific arguments, returning a success or failure status.
+
+# Prerequisites:
+# - jq must be installed on the system for parsing and handling JSON formatted data.
+# - Familiarity with regular expressions and Bash scripting is recommended for effective use of the script.
+
+# Author: Maicon de Menezes
+# Creation Date: 06/01/2024
+# Version: 0.1.0
 
 # validateIPv4Address: Validates if the input is a valid IPv4 address.
 # Arguments: input: The input to be validated.
