@@ -24,7 +24,8 @@
 #
 # Author: Maicon de Menezes
 # Creation Date: 02/01/2024
-# Version: 0.2.1
+# Last Modified: 11/01/2024
+# Version: 0.2.2
 
 #create folder to store keychain files
 mkdir -p keychains
@@ -75,13 +76,13 @@ function openKeychain() {
 # encryptPassword: This function encrypts a given password using the AES-256-CBC encryption algorithm.
 # Arguments:
 #     password: The plain text password that needs to be encrypted.
-#     public_key: The encryption key used for encrypting the password.
+#     encryption_key: The encryption key used for encrypting the password.
 # Returns:
 #     Encrypted password, which is the Base64 encoded string of the encrypted binary data.
 function encryptPassword() {    
     local password="$1"
-    local public_key="$2"
-    echo "$password" | openssl enc -aes-256-cbc -a -pbkdf2 -pass pass:"$public_key" | base64 -w 0
+    local encryption_key="$2"
+    echo "$password" | openssl enc -aes-256-cbc -a -pbkdf2 -pass pass:"$encryption_key" | base64 -w 0
 }
 
 # generatePrivateKey: Generates a new random private key.
@@ -124,7 +125,7 @@ function storePasswordInKeychain() {
 function decryptPassword() {
     local encrypted_password="$1"
     local public_key="$2"
-    echo "$encrypted_password" | base64 --decode | openssl enc -aes-256-cbc -d -a -pbkdf2 -pass pass:"$public_key"
+    echo "$encrypted_password" | base64 -d | openssl enc -aes-256-cbc -a -d -pbkdf2 -pass pass:"$public_key"
 }
 
 # retrievePasswordFromKeychain: Searches and decrypts a password stored in a keychain file.
