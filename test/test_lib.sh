@@ -19,7 +19,7 @@
 # Version: 0.1.0
 
 # Import Scripts
-source ./utils/constants.sh
+source ../utils/constants.sh
 
 # print_success: Prints a success message in green color.
 # Arguments:
