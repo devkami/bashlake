@@ -97,22 +97,22 @@ function encryptDatasourcePassword() {
   local plain_password=$(echo "$source_json" | jq -r '.source.auth.password')
 
   if [ -z "$plain_password" ]; then
-    echo "Failure: Unable to extract plain password."
+    echo "Failure: Unable to extract plain password." >&2
     return 1
   fi
 
-  local keychain_file=$(getDatasourceKeychainFilepath "$source_json")
-  local encrypted_password="$(storePasswordInKeychain "$password" "$keychain_file" "$public_key")"
+  local keychain_file=$(setDatasourceKeychain "$source_json" "$public_key")
+  local encrypted_password="$(storePasswordInKeychain "$plain_password" "$keychain_file" "$public_key")"
 
   if [ -z "$encrypted_password" ]; then
-    echo "Failure: Unable to generate encrypted password."
+    echo "Failure: Unable to generate encrypted password." >&2
     return 1
   fi  
 
   updated_source_json=$(echo "$source_json" | jq --arg encrypted_password "$encrypted_password" '.source.auth.password = $encrypted_password')
 
   if [ -z "$updated_source_json" ]; then
-    echo "Failure: Unable to update the source JSON."
+    echo "Failure: Unable to update the source JSON." >&2
     return 1
   fi
 
@@ -131,22 +131,22 @@ function decryptDatasourcePassword() {
   local encryption_key=$(echo "$source_json" | jq -r '.source.auth.password')
 
   if [ -z "$encryption_key" ]; then
-    echo "Failure: Unable to extract encryption key."
+    echo "Failure: Unable to extract encryption key." >&2
     return 1
   fi
 
-  local keychain_file=$(getDatasourceKeychainFilepath "$source_json")
+  local keychain_file=$(getDatasourceKeychainFilepath "$source_json")  
   local db_password=$(retrievePasswordFromKeychain "$encryption_key" "$keychain_file" "$public_key")
 
   if [ -z "$db_password" ]; then
-    echo "Failure: Unable to retrieve or decrypt the database password."
+    echo "Failure: Unable to retrieve or decrypt the database password." >&2
     return 1
   fi
 
   updated_source_json=$(echo "$source_json" | jq --arg decrypted_password "$db_password" '.source.auth.password = $decrypted_password')
 
   if [ -z "$updated_source_json" ]; then
-    echo "Failure: Unable to update the source JSON."
+    echo "Failure: Unable to update the source JSON." >&2
     return 1
   fi
   echo "$updated_source_json"
