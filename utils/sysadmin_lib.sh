@@ -25,7 +25,7 @@
 # Version: 0.2.0
 
 # Import the logging functions from log_lib.sh
-source ../log/log_lib.sh
+source ../log/log_lib.sh 
 
 # checkSystemVersion: Verifies that the script is running on Ubuntu 22.04.
 # Usage: checkSystemVersion
@@ -156,4 +156,31 @@ function checkJqInstall() {
         logMess "'jq' is already installed."
         return 0
     fi
+}
+
+# listFolderTree: Lists all subdirectories of a given directory.
+# Arguments:
+#     root_folder: the directory to list subdirectories from.
+# Returns:
+#     0 and outputs the subdirectories if successful
+#     1 if the provided path is not a directory.
+function listFolderTree() {
+    local root_folder="$1"
+    # Check if a directory path is provided
+    if [ -z "$root_folder" ]; then
+        echo "Please provide a directory path."
+        return 1
+    fi
+
+    # Check if the provided path is a directory
+    if [ ! -d "$root_folder" ]; then
+        echo "The provided path is not a valid directory."
+        return 1
+    fi
+
+    # List all subdirectories
+    for dir in $(find "$root_folder" -mindepth 1 -type d); do
+        echo "$dir"
+    done
+    return 0
 }
