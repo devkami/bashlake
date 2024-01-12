@@ -2,3 +2,4 @@ logs/
 .swp
 *.csv
 *.kc
+**/keychains/
