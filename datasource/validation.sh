@@ -13,6 +13,10 @@
 # - Validate inputs containing only single words, alphanumeric, and beginning with a letter.
 # - Validate inputs against a list of items.
 # - Validate inputs based on a field criteria using a JSON input format.
+# - Validate JSON objects.
+# - Validate inputs as valid time in the format HH:MM.
+# - Validates inputs as valid day of month 1-31.
+# - Validates inputs as valid boolean values.
 #
 # Functions:
 # - validateIPv4Address: Checks if a given string is a valid IPv4 address.
@@ -24,6 +28,10 @@
 # - validateSingleWord: Confirms that an input is a single word, alphanumeric, and begins with a letter.
 # - validateInputInList: Validates whether a given input is present in a provided list of items.
 # - validateField: Validates a user input based on the specified field criteria using a JSON input format.
+# - validateJsonObject: Validates if the input is a valid JSON string.
+# - validateDayTime: Validates if the input is a valid time in the format HH:MM.
+# - validateDayOfMonth: Validates if the input is a valid day of month.
+# - validateIsBoolean: Validates if the input is a valid boolean value.
 #
 # Usage:
 # The script can be sourced in any Bash environment where input validation is required. It's especially useful in scenarios involving network configurations, user input validation, or data source management. Each function is designed to be independently called with specific arguments, returning a success or failure status.
@@ -34,7 +42,11 @@
 #
 # Author: Maicon de Menezes
 # Creation Date: 06/01/2024
-# Version: 0.1.0
+# Last Modified: 15/01/2024
+# Version: 0.2.0
+
+# Imports
+source ../utils/constants.sh
 
 # validateIPv4Address: Validates if the input is a valid IPv4 address.
 # Arguments: input: The input to be validated.
@@ -140,6 +152,49 @@ function validateInputInList() {
   return 1
 }
 
+# validateJsonObject: Validates if the input is a valid JSON string.
+# Arguments: json_string: The input to be validated.
+# Returns: Success (0) or failure (1).
+function validateJsonObject() {
+  local json_string=$1
+  jq -e . >/dev/null 2>&1 <<<"$json_string"
+}
+
+# validateDayTime: Validates if the input is a valid time in the format HH:MM.
+# Arguments: input: The input to be validated.
+# Returns: Success (0) or failure (1).
+function validateDayTime() {
+  local input=$1
+  local time_regex="^([0-1][0-9]|2[0-3]):[0-5][0-9]$"
+
+  if [[ $input =~ $time_regex ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+# validateDayOfMonth: Validates if the input is a valid day of month.
+# Arguments: input: The input to be validated.
+# Returns: Success (0) or failure (1).
+function validateDayOfMonth() {
+  local input=$1  
+  
+  validateOnlyDigits "$input" && \
+  ((input >= 1 && input <= 31)) && \
+  return 0 || return 1
+}
+
+# validateIsBoolean: Validates if the input is a valid boolean value.
+# Arguments: input: The input to be validated.
+# Returns: Success (0) or failure (1).
+function validateIsBoolean() {
+  local input=$1
+  local boolean_regex="^(true|false|1|0)$"
+  
+  [[ $input =~ $boolean_regex ]] && return 0 || return 1
+}
+
 # validateField: Validates user input based on the specified field.
 # Arguments: field_json: A JSON string {"field_name": "name of the field", "field_value": "value"}.
 # Returns: Success (0) or failure (1).
@@ -155,14 +210,56 @@ function validateField() {
       else
         return 1
       fi ;;
-    "source.auth.port"|"sync.frequency")
+    "auth.port"|"interval.value")
       if validateOnlyDigits "$field_value"; then
         return 0
       else
         return 1
       fi ;;
-    "source.auth.host")
-      if validateHostAddress "$input"; then
+    "auth.host")
+      if validateHostAddress "$field_value"; then
+        return 0
+      else
+        return 1
+      fi ;;
+    "syncs.title")
+      if validateOnlyText "$field_value"; then
+        return 0
+      else
+        return 1
+      fi ;;
+    "schedule.type")
+      if validateInputInList "$field_value" "$SYNC_TYPE_NAMES"; then
+        return 0
+      else
+        return 1
+      fi ;;
+    "schedule.time")
+      if validateDayTime "$field_value"; then
+        return 0
+      else
+        return 1
+      fi ;;
+    "schedule.dow")
+      if validateInputInList "$field_value" "$SYNC_DOW_NAMES"; then
+        return 0
+      else
+        return 1
+      fi ;;
+    "schedule.dom")
+      if validateDayOfMonth "$field_value"; then
+        return 0
+      else
+        return 1
+      fi ;;    
+    "schedule.enabled")
+      if validateIsBoolean "$field_value"; then
+        return 0
+      else
+        return 1
+      fi ;;
+    "interval.unit")
+      if validateInputInList "$field_value" "$SYNC_INTERVAL_NAMES"; then
         return 0
       else
         return 1
@@ -171,4 +268,79 @@ function validateField() {
       return 1
       ;;
   esac
+}
+
+# validateSyncSchedule: Validates a sync schedule.
+# Arguments: schedule_json: A JSON string representing the sync schedule.
+# Returns: Success (0) or failure (1).
+function validateSyncSchedule() {
+  local schedule_json=$1
+
+  if ! validateJsonObject "$schedule_json"; then
+    echo "schedule_json is not a valid JSON." >&2
+    return 1
+  fi
+
+  for field in "${SYNC_SCHEDULE_FIELDS[@]}"; do
+    local value=$(echo "$schedule_json" | jq -r ".$field // empty")
+    local field_json="{\"field_name\": \"schedule.$field\", \"field_value\": \"$value\"}"
+    if ! validateField "$field_json"; then
+      echo "Invalid or missing value for '$field' in schedule_json." >&2
+      return 1
+    fi
+  done
+}
+
+# validateSyncScheduleInterval: Validates a sync schedule interval.
+# Arguments: interval_json: A JSON string representing the sync schedule interval.
+# Returns: Success (0) or failure (1).
+function validateSyncScheduleInterval() {
+  local interval_json=$1
+
+  if ! validateJsonObject "$interval_json"; then
+    echo "interval_json is not a valid JSON." >&2
+    return 1
+  fi
+
+  for field in "${SYNC_INTERVAL_FIELDS[@]}"; do
+    local value=$(echo "$interval_json" | jq -r ".$field // empty")
+    local field_json="{\"field_name\": \"interval.$field\", \"field_value\": \"$value\"}"
+    if ! validateField "$field_json"; then
+      echo "Invalid or missing value for '$field' in interval_json." >&2
+      return 1
+    fi
+  done
+}
+
+# validateSync: Validates a sync configuration.
+# Arguments: sync_json: A JSON string representing the sync configuration.
+# Returns: Success (0) or failure (1).
+function validateSync() {
+  local sync_json=$1
+  
+  if ! validateJsonObject "$sync_json"; then
+    echo "sync_json is not a valid JSON." >&2
+    return 1
+  fi
+
+  local sync_title=$(echo "$sync_json" | jq -r '.title')
+  local sync_schedule=$(echo "$sync_json" | jq -r '.schedule')
+  local sync_schedule_interval=$(echo "$sync_schedule" | jq -r '.interval')
+
+  if ! validateField "{\"field_name\": \"syncs.title\", \"field_value\": \"$sync_title\"}"; then
+    echo "Invalid or missing value for Sync Title in Sync." >&2
+    return 1
+  fi
+
+  if ! validateSyncSchedule "$sync_schedule"; then
+    echo "Invalid or missing value for Sync Schedule in Sync." >&2
+    return 1
+  fi
+
+  if ! validateSyncScheduleInterval "$sync_schedule_interval"; then
+    echo "Invalid or missing value for Sync Schedule Interval in Sync." >&2
+    return 1
+  fi
+
+  return 0
 }
